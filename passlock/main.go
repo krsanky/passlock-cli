@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/krsanky/passlock-cli/model"
+	_ "github.com/krsanky/passlock-cli/model"
+	"github.com/krsanky/passlock-cli/passlock/ui"
 )
 
 func main() {
 	fmt.Println("passlock...")
-	model.CreateTable()
+	ui.Ui()
 }
