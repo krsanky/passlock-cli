@@ -68,7 +68,7 @@ func Ui() {
 		Background(tcell.ColorBlack))
 	s.Clear()
 
-	quit := make(chan struct{})
+	//quit := make(chan struct{})
 
 	style = bold
 	putln(s, "Press ESC to Exit")
@@ -125,6 +125,7 @@ func Ui() {
 	}))
 
 	s.Show()
+	quit := make(chan struct{})
 	go func() {
 		for {
 			ev := s.PollEvent()
@@ -143,7 +144,94 @@ func Ui() {
 		}
 	}()
 
-	<-quit
+	<-quit // wait for output from chan (or close chan)
+
+	s.Fini()
+}
+
+func Ui2() {
+	encoding.Register()
+	s, err := tcell.NewScreen()
+	if err != nil {
+		panic(err)
+	}
+	if err = s.Init(); err != nil {
+		panic(err)
+	}
+
+	plain := tcell.StyleDefault
+	bold := style.Bold(true)
+
+	s.SetStyle(tcell.StyleDefault.
+		Foreground(tcell.ColorWhite).
+		Background(tcell.ColorBlack))
+	s.Clear()
+
+	style = bold
+	putln(s, "Press ESC to Exit")
+	putln(s, "Character set: "+s.CharacterSet())
+	style = plain
+
+	putln(s, "English:   October")
+	putln(s, "")
+	putln(s, "Box:")
+	putln(s, string([]rune{
+		tcell.RuneULCorner,
+		tcell.RuneHLine,
+		tcell.RuneTTee,
+		tcell.RuneHLine,
+		tcell.RuneURCorner,
+	}))
+	putln(s, string([]rune{
+		tcell.RuneVLine,
+		tcell.RuneBullet,
+		tcell.RuneVLine,
+		tcell.RuneLantern,
+		tcell.RuneVLine,
+	})+"  (bullet, lantern/section)")
+	putln(s, string([]rune{
+		tcell.RuneLTee,
+		tcell.RuneHLine,
+		tcell.RunePlus,
+		tcell.RuneHLine,
+		tcell.RuneRTee,
+	}))
+	putln(s, string([]rune{
+		tcell.RuneVLine,
+		tcell.RuneDiamond,
+		tcell.RuneVLine,
+		tcell.RuneUArrow,
+		tcell.RuneVLine,
+	})+"  (diamond, up arrow)")
+	putln(s, string([]rune{
+		tcell.RuneLLCorner,
+		tcell.RuneHLine,
+		tcell.RuneBTee,
+		tcell.RuneHLine,
+		tcell.RuneLRCorner,
+	}))
+
+	s.Show()
+	quit := make(chan struct{})
+	go func() {
+		for {
+			ev := s.PollEvent()
+			switch ev_ := ev.(type) {
+			case *tcell.EventKey:
+				switch ev_.Key() {
+				case tcell.KeyEscape, tcell.KeyEnter:
+					close(quit)
+					return
+				case tcell.KeyCtrlL:
+					s.Sync()
+				}
+			case *tcell.EventResize:
+				s.Sync()
+			}
+		}
+	}()
+
+	<-quit // wait for output from chan (or close chan)
 
 	s.Fini()
 }

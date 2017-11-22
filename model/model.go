@@ -9,7 +9,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
-//var DB *sql.DB
+var db *sql.DB
 
 type Passlock struct {
 	Id        int64
@@ -24,21 +24,26 @@ func (p *Passlock) String() string {
 }
 
 func init() {
+	open()
 	CreateTable()
 }
 
-func open() (*sql.DB, error) {
-	return sql.Open("sqlite3", ".passlock.db")
+//func open() (*sql.DB, error) {
+func open() {
+	//return sql.Open("sqlite3", ".passlock.db")
+	var err error
+	db, err = sql.Open("sqlite3", ".passlock.db")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Close() {
+	db.Close()
 }
 
 // safe to run if file/table does/doesnt exist
 func CreateTable() {
-	db, err := open()
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
 	sql_ := `
 CREATE TABLE passlock (                                                                     
     id INTEGER PRIMARY KEY,
@@ -47,7 +52,7 @@ CREATE TABLE passlock (
     ts timeSTAMP NOT NULL
 )`
 
-	_, err = db.Exec(sql_)
+	_, err := db.Exec(sql_)
 
 	if err != nil {
 		//fmt.Printf("type: %s\n", reflect.TypeOf(err))
@@ -77,9 +82,6 @@ func Create(account_id int, title, password string, release time.Time) *Passlock
 
 // transaction this
 func (p *Passlock) Save() error {
-	db, err := open()
-	defer db.Close()
-
 	res, err := db.Exec(`
 INSERT INTO passlock
 (title, password, ts)
@@ -96,43 +98,17 @@ VALUES (?, ?, ?)`,
 }
 
 func (p *Passlock) Delete() error {
-	db, err := open()
-	defer db.Close()
-
-	_, err = db.Exec(`
-DELETE FROM passlock
-WHERE id = ?`,
-		p.Id)
+	_, err := db.Exec(`DELETE FROM passlock WHERE id = ?`, p.Id)
 	return err
 }
 
-/*
-func Get(id int) (*Passlock, error) {
-	pl := &Passlock{}
-	row := db.DB.QueryRow(`
-SELECT id, account_id, title, password, ts
-FROM passlock
-WHERE id = $1`, id)
-
-	err := row.Scan(
-		&pl.Id,
-		&pl.AccountId,
-		&pl.Title,
-		&pl.Password,
-		&pl.Release)
-
-	return pl, err
-}
-
-func GetIds(u *account.User) ([]int, error) {
+func GetIds() ([]int, error) {
 	var (
 		id  int
 		ids []int
 	)
-	rows, err := db.DB.Query(`
-SELECT id from passlock
-WHERE account_id = $1`, u.Id)
 
+	rows, err := db.Query(`SELECT id from passlock`)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +126,24 @@ WHERE account_id = $1`, u.Id)
 	return ids, nil
 }
 
-func GetAll(u *account.User) ([]Passlock, error) {
-	ids, err := GetIds(u)
+func Get(id int) (*Passlock, error) {
+	pl := &Passlock{}
+	row := db.QueryRow(`
+SELECT id, title, password, ts
+FROM passlock
+WHERE id = $1`, id)
+
+	err := row.Scan(
+		&pl.Id,
+		&pl.Title,
+		&pl.Password,
+		&pl.Release)
+
+	return pl, err
+}
+
+func GetAll() ([]Passlock, error) {
+	ids, err := GetIds()
 	if err != nil {
 		return nil, err
 	}
@@ -165,4 +157,3 @@ func GetAll(u *account.User) ([]Passlock, error) {
 	}
 	return pls, nil
 }
-*/
